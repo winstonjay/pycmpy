@@ -5,120 +5,138 @@ stack based parser converting infix expressions to post-fix.
 This is passed on to the Emitter which may produce its own errors.
 '''
 import token
-from scanner import Scanner
+import ast
 
 
 class Parser(object):
-    '''
-    Parser implements infix to post-fix expr parsing the results are
-    stored in a list and returned at the end. main external method is parse.
-    '''
+
     def __init__(self, scanner):
         self.scanner = scanner
-        self.peek = token.Token
-        self.errors = []
-        self.stack = []
-        # init the first token.
-        self.peek = self.scanner.scan()
+        self.errors  = []
+        self.peek = self.scanner.next_token()
 
     def parse(self):
-        "parse program return stack or errors"
-        self.statement_list()
+        ast = self.parse_program()
         if self.errors:
-            for e in self.errors:
-                print(e)
-            return [None]
-        return self.stack
+            self.dump_errors()
+            return None
+        return ast
 
-    def statement_list(self):
-        '''statement_list = statement ; statement_list
-                          | statement ;
-        '''
-        while (self.peek.name != token.EOF):
-            if not self.statement():
-                break
-            tok = self.peek
+    def parse_program(self):
+        program = ast.Program()
+        while self.peek.type != token.EOF:
+            stmt = self.statement()
             self.match(token.SEMI)
-            self.stack.append(tok)
-        self.stack.append(self.peek)
-    
-     
+            program.statements.append(stmt)
+        return program
+
     def statement(self):
-        '''statement = print expr
-                     | expr
-        '''
-        if self.peek.name == token.VAR:
-            pass
-        elif self.peek.name == token.PRINT:
-            tok = self.peek
-            self.match(token.PRINT)
-            self.expr()
-            self.stack.append(tok)
-        elif self.peek.name == token.ILLEGAL:
+        if self.peek.type == token.ILLEGAL:
             self.error("Illegal Token/unexpected end of string")
-            print(self.error[-1])
-            return False
-        else:
-            self.expr()
-        return True
+            return None
+        types = (token.INT, token.CHAR, token.VOID)
+        return (self.assign() if self.peek.type in types else
+                ast.NoOp if self.peek.type == token.SEMI else
+                self.expr())
+
+    def assign(self):
+        var_type = self.peek
+        if var_type.type == token.INT:
+            self.match(token.INT)
+        elif var_type.type == token.CHAR:
+            self.match(token.CHAR)
+        elif var_type.type == token.VOID:
+            self.match(token.CHAR)
+        var = self.symbol()
+        if self.peek.type != token.ASSIGN:
+            return ast.VarDecl(var_type, var)
+        self.match(token.ASSIGN)
+        return ast.VarAssign(var_type, var, self.expr())
+
+    def expression_list(self, delim):
+        '''ExprList = Expr , ExprList
+                    | Expr'''
+        expressions = ast.ExprList(delim)
+        self.match(token.LPAREN)
+        while self.peek.type not in (token.EOF, token.RPAREN):
+            expressions.exprs.append(self.expr())
+            if self.peek.type == token.COMMA:
+                self.match(token.COMMA)
+            else:
+                self.match(token.RPAREN)
+                break
+        return expressions
 
     def expr(self):
-        '''expr = expr + term
-                | expr - term
-                | term
-        '''
-        self.term()
-        while self.peek.literal in ("+", "-"):
+        node = self.term()
+        while self.peek.type in (token.ADD, token.SUB):
             tok = self.peek
-            self.match(tok.name)
-            self.term()
-            self.stack.append(tok)
+            if tok.type == token.ADD:
+                self.match(token.ADD)
+            elif tok.type == token.SUB:
+                self.match(token.SUB)
+            node = ast.BinaryOp(node, tok, self.term())
+        return node
 
     def term(self):
-        '''term = term * factor
-                | term / factor
-                | factor
-        '''
-        self.factor()
-        while self.peek.literal in ("*", "/"):
+        "term = term * factor | term / factor"
+        node = self.factor()
+        while self.peek.type in (token.STAR, token.SLASH):
             tok = self.peek
-            self.match(tok.name)
-            self.factor()
-            self.stack.append(tok)
+            if tok.type == token.STAR:
+                self.match(token.STAR)
+            elif tok.type == token.SLASH:
+                self.match(token.SLASH)
+            node = ast.BinaryOp(node, tok, self.factor())
+        return node
 
     def factor(self):
-        '''factor = ( expr )
-                  | id
-                  | num
-        '''  
+        '''
+        factor  = UnaryOp | ( Expr ) | FuncCall | Atom
+        UnaryOp = - Expr | + Expr
+        Atom    = Number_const | String_const | Symbol
+        '''
         tok = self.peek
-        if tok.literal == "(":
+        if tok.type == token.ADD:
+            self.match(token.ADD)
+            return ast.UnaryOp(tok, self.factor())
+        elif tok.type == token.SUB:
+            self.match(token.SUB)
+            return ast.UnaryOp(tok, self.factor())
+        elif tok.type == token.LPAREN:
             self.match(token.LPAREN)
-            self.expr()
+            node = self.expr()
             self.match(token.RPAREN)
-        elif tok.name in (token.INT, token.ID_VAL, token.STRING):
-            self.stack.append(tok)
-            self.match(tok.name)
-        elif tok.name == token.EOF:
-            return
+            return node
+        elif tok.type == token.NUMBER_CONST:
+            self.match(token.NUMBER_CONST)
+            return ast.NumberConst(tok)
+        elif tok.type == token.STRING_CONST:
+            self.match(token.STRING_CONST)
+            return ast.StringConst(tok)
+        elif tok.type == token.SYMBOL:
+            node = self.peek
+            self.match(token.SYMBOL)
+            if self.peek.type == token.LPAREN:
+                return self.func_call(node)
+            return ast.Var(node)
         else:
-            return self.error("Illegal Syntax unexpected token {}, '{}'",
-                              tok.name, tok.literal)
+            raise Exception("Unexpected token.")
+
+    def func_call(self, name):
+        "FuncCall = Symbol ( ExprList )"
+        delim = self.peek
+        args  = self.expression_list(delim)
+        return ast.FuncCall(name, args)
+
+    def symbol(self):
+        tok = self.peek
+        self.match(token.SYMBOL)
+        return ast.Var(tok)
 
     def match(self, tok):
-        "check if token is correct then advance or throw an error."
-        if self.peek.name != tok:
-            return self.error("unexpeted token. want={}. got={}",
-                         tok, self.peek.name)
-        self.peek = self.scanner.scan()
-
-    def error(self, message, *args):
-        self.errors.append("Parse Error, Line {}: ".format(self.peek.line)
-                           + message.format(*args))
-        if len(self.errors) > 3:
-            for e in self.errors:
-                print(e)
-            raise Exception("Too many errors!")
-        return None
-
-
+        if self.peek.type != tok:
+            n = token.token_names
+            raise Exception("Wrong token got=%s. want=%s" % (
+                            n[self.peek.type], n[tok]))
+        self.peek = self.scanner.next_token()

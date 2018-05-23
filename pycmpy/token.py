@@ -1,53 +1,79 @@
 """token.py:
 Define the tokens types to be used by the scanner.
 """
-from collections import namedtuple
 
-Token = namedtuple('Token', ("name", "literal", "line"))
+class Token(object):
 
-EOF     = "eof"
-ILLEGAL = "illegal"
-INT     = "int"
-ID_VAL  = "id"
-STRING  = "string"
+    def __init__(self, _type, value):
+        self.type = _type
+        self.value = value
 
-COMMENT = "#"
+    def __str__(self):
+        return "Token<{}: '{}'>".format(token_names[self.type], self.value)
 
-#### Operators and delimeters.
+    __repr__ = __str__
 
-LPAREN  = "lparen"  # (
-RPAREN  = "rparen"  # )
-ADD     = "add"     # +
-SUB     = "sub"     # -
-MUL     = "mul"     # *
-DIV     = "div"     # /
-SEMI    = "semi"
+(EOF,           # EOF
+ ILLEGAL,       # ILLEGAL
+ VOID,          # void
+ INT,           # int
+ CHAR,          # char
+ SYMBOL,        # alphanumeric identifier
+ NUMBER_CONST,  # any integer
+ STRING_CONST,  # " any string "
+ LPAREN,        # (
+ RPAREN,        # )
+ LSQR,          # [
+ RSQR,          # ]
+ LCURL,         # {
+ RCURL,         # }
+ ADD,           # +
+ SUB,           # -
+ STAR,          # *
+ SLASH,         # /
+ LTHAN,         # <
+ GTHAN,         # >
+ EQUAL,         # ==
+ ASSIGN,        # =
+ SEMI,          # ;
+ COMMA,         # ,
+ IF,            # if
+ ELSE           # else
+) = range(26)
 
-operators = {
-    '+': ADD,
-    '-': SUB,
-    '*': MUL,
-    '/': DIV,
-    '(': LPAREN,
-    ')': RPAREN,
-    ';': SEMI
-}
-
-op_names = set([ADD, SUB, MUL, DIV])
-
-#### Keywords
-
-VAR     = "var"
-LET     = "let"
-IF      = "if"   
-ELSE    = "else"    
-PRINT   = "print"
-READ    = "read" 
+token_names = [
+    "EOF",
+    "ILLEGAL",
+    "VOID",
+    "INT",
+    "CHAR",
+    "SYMBOL",
+    "NUMBER_CONST",
+    "STRING_CONST",
+    "LPAREN",
+    "RPAREN",
+    "LSQR",
+    "RSQR",
+    "LCURL",
+    "RCURL",
+    "ADD",
+    "SUB",
+    "STAR",
+    "SLASH",
+    "LTHAN",
+    "GTHAN",
+    "EQUAL",
+    "ASSIGN",
+    "SEMI",
+    "COMMA",
+    "IF",
+    "ELSE"
+]
 
 keywords = {
-    "var": VAR,
-    "let":    LET,
+    "int":    INT,
+    "char":   CHAR,
+    "void":   VOID,
     "if":     IF,
-    "else":   ELSE,
-    "print":  PRINT
+    "else":   ELSE
 }
