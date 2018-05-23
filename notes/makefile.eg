@@ -1,0 +1,15 @@
+fn: fn.o io_arm.o
+	ld -o fn fn.o io_arm.o
+fn.o: fn.s lib/io_arm.s
+	as -o fn.o fn.s
+	as -o io_arm.o lib/io_arm.s
+clean:
+	rm *.o
+debug:
+	as -g -o fn.o fn.s
+	as -g -o io_arm.o lib/io_arm.s
+	ld -o fn fn.o
+	gdb fn
+gcc:
+	gcc -o fn fn.s
+
