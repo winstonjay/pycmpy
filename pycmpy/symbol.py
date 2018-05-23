@@ -37,6 +37,7 @@ class BuiltinSymbol(Symbol):
     def __str__(self):
         return self.name
 
+varadic_len = -1
 
 class FunctionSymbol(Symbol):
     def __init__(self, name, _type=None, arglen=varadic_len, argtypes=[]):
@@ -47,5 +48,3 @@ class FunctionSymbol(Symbol):
 
     def __str__(self):
         return "<{}:{}>".format(self.name, self.type)
-
-varadic_len = -1

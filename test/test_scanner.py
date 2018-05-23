@@ -9,11 +9,12 @@ try:
 except:
     pass
 
+# at least do some regression tests
 
 def dump_tokens(string):
     s = scanner.Scanner(string)
     t = s.next_token()
-    while t.name != token.EOF:
+    while t.type != token.EOF:
         print(t)
         t = s.next_token()
 
