@@ -1,6 +1,6 @@
 # pycmpy
 
-Learning about compilers and the Assembly language with the Raspberry Pi.
+Learning about compilers and the assembly language with the Raspberry Pi.
 
 Most files are mainly just examples, some may not work.
 
