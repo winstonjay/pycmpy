@@ -2,22 +2,31 @@
 scanner.py:
 
 Define the class Scanner which is responosible for peforming lexical anaylsis
-of source code. It is incrementally called by the parser emiting a token,
-literal and line number each time.
+of source code.
+
+'Lexical analysis is the first phase of a compiler. It takes the modified source
+code from language preprocessors that are written in the form of sentences.
+The lexical analyzer breaks these syntaxes into a series of tokens, by removing
+any whitespace or comments in the source code.'
+
+https://www.tutorialspoint.com/compiler_design/compiler_design_lexical_analysis.htm
 '''
 import token
 
 class Scanner(object):
     '''
     Scanner implements methods for conducting a lexical analysis of source
-    codes, keeping track of its own state.
+    codes, keeping track of its own state. Its main method `next_token`
+    incrementally returns
     '''
     def __init__(self, text, pos=0, line=0):
         self.text = text
-        self.size = len(text) - 1
-        self.pos  = -1
-        self.advance()
+        self.pos  = 0
+        self.char = text[self.pos]
         self.line = line
+        self.col  = 0
+        self.size = len(text) - 1
+
 
     def next_token(self):
         "return next Token."
@@ -27,6 +36,7 @@ class Scanner(object):
             if self.char.isspace():
                 if self.char in ('\n', '\r'):
                     self.line += 1
+                    self.col = 0
                 self.advance()
                 continue
             # next if we encounter a single line comment token
@@ -35,7 +45,7 @@ class Scanner(object):
                 self.advance()
                 if self.char != "/":
                     return token.Token(token.SLASH, "/")
-                self._skip_single_comment()
+                self.skip_single_comment()
                 continue
             # We now expect to see some form of token. check char and
             # branch to the corresponding function. All scan functions
@@ -93,7 +103,7 @@ class Scanner(object):
                         self.symbol() if self.char.isalpha() else
                         self.illegal_token())
         # current token is None so we have reached the end of input.
-        return token.Token(token.EOF, token.EOF)
+        return token.Token(token.EOF, None)
 
     def number(self):
         """advance whilst valid digit chars are seen. [0-9]
@@ -101,7 +111,7 @@ class Scanner(object):
         start = self.pos
         while self.char and self.char.isdigit():
             self.advance()
-        return (token.NUMBER_CONST, self.text[start:self.pos])
+        return (token.INT_CONST, self.text[start:self.pos])
 
     def symbol(self):
         """advance whilst valid alphanumeric chars are seen. check if the
@@ -121,25 +131,41 @@ class Scanner(object):
         if self.char != '"':
             self.illegal_token()
         self.advance() # skip pass the end quote "
-        return (token.STRING_CONST, self.text[start:self.pos-1])
+        return (token.CHAR_CONST, self.text[start:self.pos-1])
 
-    def _skip_single_comment(self):
-        "advance the read char unitl we encounter a newline."
+    def skip_single_comment(self):
+        "advance the read char until we encounter a newline."
         while self.pos < self.size and self.char not in ('\n', '\r'):
             self.pos += 1
+            self.col += 1
             self.char = self.text[self.pos]
         self.line += 1
+        self.col = 0
         self.advance()
 
     def advance(self):
         "Increment read char position or set to None if at end of input"
         try:
             self.pos += 1
+            self.col += 1
             self.char = self.text[self.pos]
-        except:
+        except IndexError:
             self.char = None
 
     def illegal_token(self):
         literal = self.char
         self.advance()
         return (token.ILLEGAL, literal)
+
+
+    def trace(self, tok):
+        '''return line, column position of the last token alonging with
+        a full string representation of the line it is on.'''
+        col = self.col - len(tok.value)
+        if tok == token.CHAR_CONST:
+            col -= 2 # account for string quotes.
+        line_end = self.text.find("\n", self.col)
+        if line_end == -1:
+            line_end = self.size
+        linestr = self.text[self.pos - self.col:line_end + 1]
+        return {"line": self.line, "col": col, "trace": linestr}

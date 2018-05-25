@@ -13,11 +13,11 @@ class SymbolTable(object):
         self.define(FunctionSymbol("print", arglen=1))
 
     def define(self, symbol):
-        print("<define: '%s'>" % symbol.name)
+        print("define: %s" % symbol)
         self.table[symbol.name] = symbol
 
     def lookup(self, name):
-        print("<lookup: '%s'>" % name)
+        print("lookup: '%s'" % name)
         return self.table.get(name)
 
     def exists(self, name):
@@ -35,7 +35,7 @@ class VarSymbol(Symbol):
 
 class BuiltinSymbol(Symbol):
     def __str__(self):
-        return self.name
+        return "<%s:'%s'>" % (self.__class__.__name__, self.name)
 
 varadic_len = -1
 
@@ -47,4 +47,4 @@ class FunctionSymbol(Symbol):
         self.argtypes = argtypes
 
     def __str__(self):
-        return "<{}:{}>".format(self.name, self.type)
+        return "<%s:%s -> %s>" % (self.__class__.__name__, self.name, self.type or "void")

@@ -16,6 +16,7 @@ def dump_tokens(string):
     t = s.next_token()
     while t.type != token.EOF:
         print(t)
+        print("main:{line}:{col}:\n{trace}\n".format(**s.trace(t)))
         t = s.next_token()
 
 if __name__ == "__main__":
